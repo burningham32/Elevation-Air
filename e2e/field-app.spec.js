@@ -17,6 +17,16 @@ test('inspection persists and produces a correctly priced draft proposal on desk
  await page.reload();await expect(page.locator('[data-path="name"]')).toHaveValue('Alex Morgan');
  await page.getByRole('button',{name:'Review recommendations'}).click();
  await expect(page.locator('.model-name').first()).toContainText('Trident Pro 4.8');
+ await expect(page.locator('[data-path="atticStyle"] option')).toHaveText(['Roof','Gable','Roof Solar']);
+ await page.locator('[data-path="atticStyle"]').selectOption('roof');
+ await expect(page.locator('.automatic-model')).toContainText('AFR SMT ES-2.0');
+ await expect(page.locator('.price-total')).toContainText('$3,000.00');
+ await page.locator('[data-path="atticStyle"]').selectOption('solar');
+ await expect(page.locator('.automatic-model')).toContainText('AFR SLR-40W');
+ await expect(page.locator('.price-total')).toContainText('$3,075.00');
+ await page.locator('[data-path="atticStyle"]').selectOption('gable');
+ await expect(page.locator('.automatic-model')).toContainText('AFG SMT ES-3.0');
+ await expect(page.locator('.price-total')).toContainText('$2,800.00');
  await page.locator('[data-path="includeAttic"]').uncheck();
  await expect(page.locator('.price-total')).toContainText('$2,100.00');
  await page.locator('[data-path="wholeSeries"]').selectOption('stealth');

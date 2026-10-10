@@ -17,6 +17,11 @@ export const defaults = {
     {id:'garage',kind:'garage',series:'garage',name:'QuietCool Garage Fan',cfm:'',price:900,sample:true},
   ]
 };
+export const atticApplications = [
+  {type:'roof',label:'Roof',modelId:'roof'},
+  {type:'gable',label:'Gable',modelId:'gable'},
+  {type:'solar',label:'Roof Solar',modelId:'solar'},
+];
 export function newExhaustVent(type='ridge') {
   return {type,count:'',nfa:({'ridge':18,'box / static':60,'gable':80})[type]??''};
 }
@@ -58,7 +63,8 @@ export function calculate(job,settings) {
   // An unrated model may be priced as a draft candidate, never certified as sized.
   const resolve = (field,kind,target) => job[field]==='auto' ? recommend(candidates(kind),kind,target) || (target ? candidates(kind).find(m=>!num(m.cfm)) : null) || null : candidates(kind).find(m=>m.id===job[field]) || null;
   const whole = resolve('wholeModel','whole',whfTarget);
-  const atticFan = resolve('atticModel','attic',atticTarget);
+  const application = atticApplications.find(a=>a.type===job.atticStyle);
+  const atticFan = settings.catalog.find(m=>m.id===application?.modelId && m.kind==='attic' && m.series===job.atticStyle) || null;
   const garage = settings.catalog.find(m=>m.kind==='garage' && m.id===job.garageModel)||null;
   const ach = volume && whole ? num(whole.cfm)*60/volume : null;
   const discharge = whole && num(settings.dischargeRate) ? num(whole.cfm)/num(settings.dischargeRate) : 0;
@@ -77,7 +83,7 @@ export function calculate(job,settings) {
   if(!num(settings.whfRate) || !num(settings.atticRate) || !num(settings.dischargeRate)) warnings.push('Set positive airflow and attic discharge sizing rules in Settings.');
   if(Number(job.ratio)===300 && !job.qualified300) warnings.push('1:300 conditions are not confirmed; calculations use the conservative 1:150 ratio.');
   if(job.includeWhole && !whole) warnings.push('No whole house fan meets this target. Add suitable equipment or exclude it from the estimate.');
-  if(job.includeAttic && !atticFan) warnings.push('No attic fan meets this target. Add suitable equipment or exclude it from the estimate.');
+  if(job.includeAttic && !atticFan) warnings.push('The attic fan tied to this application is missing from the catalog. Restore it in Settings or exclude it from the estimate.');
   if(job.includeWhole && whole && num(whole.cfm)<whfTarget) warnings.push('The selected whole house fan is below the airflow target.');
   if(job.includeAttic && atticFan && num(atticFan.cfm) && num(atticFan.cfm)<atticTarget) warnings.push('The selected attic fan is below the airflow target.');
   if(job.includeGarage && !garage) warnings.push('Select a garage fan or remove it from the proposal.');
