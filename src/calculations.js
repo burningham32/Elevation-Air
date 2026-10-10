@@ -1,6 +1,6 @@
 export const defaults = {
   businessName: 'Elevation Air', businessPhone: '', businessEmail: '', license: '',
-  whfRate: 2, atticRate: 0.7, dischargeRate: 750, taxRate: 0, validDays: 30,
+  whfRate: 2, atticRate: 0.7, dischargeRate: 750, validDays: 30,
   catalog: [
     {id:'t48',kind:'whole',series:'trident',name:'QuietCool Trident Pro 4.8',cfm:4800,price:2100,sample:true},
     {id:'t55',kind:'whole',series:'trident',name:'QuietCool Trident Pro 5.5',cfm:5500,price:2250,sample:true},
@@ -30,7 +30,7 @@ export function newJob() {
     levels:[{name:'Main level',sqft:''}],ceilingType:'standard',atticSqft:'',ratio:150,qualified300:false,
     intake:'inadequate',intakeNfa:'',exhaustVents:[newExhaustVent()],
     notes:'',photos:[],wholeSeries:'trident',atticStyle:'gable',wholeModel:'auto',atticModel:'auto',garageModel:'none',includeWhole:true,includeAttic:true,includeGarage:false,
-    discount:0,additionalWork:[{description:'',price:''}]};
+    discount:0,additionalWork:[{description:'',price:''}],recommendedWork:[{description:'',price:''}]};
 }
 function localDate() { const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 export const num = v => Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0;
@@ -42,7 +42,7 @@ export function additionalWork(job) {
 }
 export function migrateJob(job) {
   const {extraLabel,extraPrice,includeIntake,includeExhaust,...current}=job;
-  return {...current,additionalWork:additionalWork(job).map(item=>({...item})),levels:job.levels.map(({height,...level})=>level),ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
+  return {...current,additionalWork:additionalWork(job).map(item=>({...item})),recommendedWork:(job.recommendedWork??[]).map(item=>({...item})),levels:job.levels.map(({height,...level})=>level),ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
 }
 export function recommend(catalog,kind,target) {
   if (!target) return null;
@@ -76,7 +76,9 @@ export function calculate(job,settings) {
   if(job.includeGarage && garage) items.push({label:garage.name,price:num(garage.price),sample:!!garage.sample});
   for(const work of additionalWork(job)) if(work.description.trim()) items.push({label:work.description.trim(),price:num(work.price),sample:false});
   const subtotal=items.reduce((s,i)=>s+i.price,0), discount=Math.min(num(job.discount),subtotal);
-  const tax=(subtotal-discount)*num(settings.taxRate)/100, total=subtotal-discount+tax;
+  const total=subtotal-discount;
+  const recommendedItems=(job.recommendedWork??[]).filter(w=>w.description.trim()).map(w=>({label:w.description.trim(),price:num(w.price)}));
+  const recommendedTotal=recommendedItems.reduce((sum,w)=>sum+w.price,0), totalWithRecommended=total+recommendedTotal;
   const warnings=[];
   if(!house || job.levels.some(l=>!num(l.sqft))) warnings.push('Enter square footage for each occupied level.');
   if(!attic) warnings.push('Enter attic square footage to calculate ventilation.');
@@ -93,5 +95,7 @@ export function calculate(job,settings) {
   if((job.includeWhole && whole && whole.price==='') || (job.includeAttic && atticFan && atticFan.price==='') || (job.includeGarage && garage && garage.price==='')) warnings.push('Set installed equipment prices in Settings. Blank prices are not customer quotes.');
   if(additionalWork(job).some(w=>w.description.trim() && w.price==='')) warnings.push('Enter an installed price for each additional work item.');
   if(additionalWork(job).some(w=>!w.description.trim() && num(w.price))) warnings.push('Enter a description for each priced additional work item.');
-  return {house,attic,ratio,nfa,nfaSqft,intakeNeeded,exhaustNeeded,existingExhaust,exhaustBreakdown,exhaustUnknown,whfRate,whfTarget,atticTarget,whole,atticFan,garage,discharge,items,subtotal,discount,tax,total,warnings};
+  if((job.recommendedWork??[]).some(w=>w.description.trim() && w.price==='')) warnings.push('Enter a price for each recommended work item.');
+  if((job.recommendedWork??[]).some(w=>!w.description.trim() && num(w.price))) warnings.push('Enter a description for each priced recommended work item.');
+  return {house,attic,ratio,nfa,nfaSqft,intakeNeeded,exhaustNeeded,existingExhaust,exhaustBreakdown,exhaustUnknown,whfRate,whfTarget,atticTarget,whole,atticFan,garage,discharge,items,subtotal,discount,total,recommendedItems,recommendedTotal,totalWithRecommended,warnings};
 }

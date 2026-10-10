@@ -6,7 +6,7 @@ export function validateBackup(data){
   const fail=()=>{throw new Error('Invalid Elevation Air backup');};
   if(!data||data.version!==1||!Array.isArray(data.jobs)||!data.jobs.length||data.jobs.length>1000||!data.settings||!Array.isArray(data.settings.catalog)||data.settings.catalog.length>200)fail();
   const s=data.settings;
-  if(!strings(s,['businessName','businessPhone','businessEmail','license']) || !['whfRate','atticRate','dischargeRate','taxRate','validDays'].every(k=>quantity(s[k])))fail();
+  if(!strings(s,['businessName','businessPhone','businessEmail','license']) || !['whfRate','atticRate','dischargeRate','validDays'].every(k=>quantity(s[k])))fail();
   const modelIds=new Set(),jobIds=new Set();
   for(const m of s.catalog){
     if(!m||!id(m.id)||modelIds.has(m.id)||!text(m.name)||!['whole','attic','garage'].includes(m.kind)||!['trident','stealth','gable','roof','solar','garage'].includes(m.series)||!quantity(m.cfm)||!quantity(m.price)||typeof m.sample!=='boolean')fail();
@@ -19,6 +19,10 @@ export function validateBackup(data){
       if(j.additionalWork.length>100)fail();
       for(const w of j.additionalWork)if(!w||!text(w.description)||!quantity(w.price))fail();
     } else if(j.additionalWork!==undefined||!text(j.extraLabel)||!quantity(j.extraPrice))fail();
+    if(j.recommendedWork!==undefined){
+      if(!Array.isArray(j.recommendedWork)||j.recommendedWork.length>100)fail();
+      for(const w of j.recommendedWork)if(!w||!text(w.description)||!quantity(w.price))fail();
+    }
     if(j.ceilingType!==undefined&&!['standard','vaulted'].includes(j.ceilingType))fail();
     if(Array.isArray(j.exhaustVents)) {
       if(j.exhaustVents.length>50)fail();

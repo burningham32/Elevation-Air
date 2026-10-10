@@ -14,8 +14,8 @@ test('recommendation never silently undersizes beyond the available catalog',()=
 test('override below target is flagged',()=>{
  const j=setup();j.wholeModel='t48';j.levels[0].sqft=2500;const c=calculate(j,defaults);assert.equal(c.whole.id,'t48');assert.ok(c.warnings.some(w=>w.includes('below the airflow target')));
 });
-test('price honors included scope, discount, tax, and nonnegative total',()=>{
- const j=setup();const s=structuredClone(defaults);s.catalog.find(m=>m.id==='t48').price=2900;s.catalog.find(m=>m.id==='gable').price=900;s.catalog.find(m=>m.id==='gable').cfm=1945;s.taxRate=8;j.discount=200;j.additionalWork=[{description:'Electrical',price:300}];let c=calculate(j,s);assert.equal(c.subtotal,4100);assert.equal(c.tax,312);assert.equal(c.total,4212);j.includeAttic=false;c=calculate(j,s);assert.equal(c.subtotal,3200);j.discount=10000;c=calculate(j,s);assert.equal(c.total,0);
+test('price honors included scope and discount, ignores legacy tax, and stays nonnegative',()=>{
+ const j=setup();const s=structuredClone(defaults);s.catalog.find(m=>m.id==='t48').price=2900;s.catalog.find(m=>m.id==='gable').price=900;s.catalog.find(m=>m.id==='gable').cfm=1945;s.taxRate=8;j.discount=200;j.additionalWork=[{description:'Electrical',price:300}];let c=calculate(j,s);assert.equal(c.subtotal,4100);assert.ok(!('tax' in c));assert.equal(c.total,3900);j.includeAttic=false;c=calculate(j,s);assert.equal(c.subtotal,3200);j.discount=10000;c=calculate(j,s);assert.equal(c.total,0);
 });
 test('missing measurements and prices remain explicit instead of valid zero estimates',()=>{
  const c=calculate(newJob(),defaults);assert.equal(c.whole,null);assert.equal(c.atticFan.id,'gable');assert.ok(c.warnings.some(w=>w.includes('square footage')));assert.ok(c.warnings.some(w=>w.includes('attic square footage')));const c2=calculate(setup(),defaults);assert.ok(c2.warnings.some(w=>w.includes('rated CFM')));assert.ok(c2.warnings.some(w=>w.includes('confirmation')));
@@ -58,4 +58,11 @@ test('multiple additional work items are separately priced and legacy allowances
  const c=calculate(j,s);assert.equal(c.subtotal,3250);assert.deepEqual(c.items.slice(-2).map(i=>[i.label,i.price]),[['Electrical',300],['Attic access',150]]);
  const legacy={...j,extraLabel:'Electrical',extraPrice:300};delete legacy.additionalWork;
  const migrated=migrateJob(legacy);assert.deepEqual(migrated.additionalWork,[{description:'Electrical',price:300}]);assert.equal(calculate(migrated,s).subtotal,3100);assert.ok(!('includeIntake' in migrated));assert.ok(!('extraLabel' in migrated));assert.deepEqual(migrateJob(migrated),migrated);
+});
+
+test('recommended work is totaled separately without changing estimate or discount',()=>{
+ const j=setup();j.additionalWork=[{description:'Electrical',price:300}];j.discount=100;
+ const initial=calculate(j,defaults);j.recommendedWork=[{description:'Insulation upgrade',price:1200},{description:'Air sealing',price:400}];
+ const c=calculate(j,{...defaults,taxRate:25});assert.equal(c.total,3000);assert.equal(c.total,initial.total);assert.equal(c.subtotal,initial.subtotal);assert.equal(c.recommendedTotal,1600);assert.equal(c.totalWithRecommended,4600);assert.deepEqual(c.recommendedItems.map(i=>i.label),['Insulation upgrade','Air sealing']);assert.ok(!c.items.some(i=>i.label==='Air sealing'));
+ delete j.recommendedWork;assert.deepEqual(migrateJob(j).recommendedWork,[]);
 });

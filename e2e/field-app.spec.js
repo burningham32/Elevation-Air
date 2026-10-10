@@ -156,3 +156,35 @@ test('iPhone additional work items persist, can be removed, and are itemized in 
  await page.locator('[data-tab="settings"]').click();
  await expect(page.locator('[data-path="settings.intakePrice"],[data-path="settings.exhaustPrice"]')).toHaveCount(0);
 });
+
+test('recommended work stays separate from initial estimate and follows its total on iPhone',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await inspect(page);
+ await page.getByRole('button',{name:'Review recommendations'}).click();
+ await page.locator('[data-path="additionalWork.0.description"]').fill('Electrical');
+ await page.locator('[data-path="additionalWork.0.price"]').fill('300');
+ await page.locator('[data-path="recommendedWork.0.description"]').fill('Air sealing');
+ await page.locator('[data-path="recommendedWork.0.price"]').fill('400');
+ await page.locator('#add-recommended').click();
+ await page.locator('[data-path="recommendedWork.1.description"]').fill('Insulation upgrade');
+ await page.locator('[data-path="recommendedWork.1.price"]').fill('1200');
+ await page.locator('#add-recommended').click();
+ await page.getByRole('button',{name:'Remove recommended work item 3',exact:true}).click();
+ await expect(page.locator('.price-total')).toContainText('$3,100.00');
+ await expect(page.locator('.recommended-total')).toContainText('$1,600.00');
+ await expect(page.locator('.combined-total')).toContainText('$4,700.00');
+ await expect(page.locator('#summary')).toContainText('$3,100.00');
+ await expect(page.locator('#save-status')).toHaveText('Saved on this device');
+ await page.reload();await page.getByRole('button',{name:'Review recommendations'}).click();
+ await expect(page.locator('[data-path="recommendedWork.1.description"]')).toHaveValue('Insulation upgrade');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.locator('#generate').click();
+ const proposal=page.locator('#proposal-document');
+ await expect(proposal.locator('.price-total')).toContainText('$3,100.00');
+ await expect(proposal.locator('.recommended-pricing')).toContainText('Air sealing');
+ await expect(proposal.locator('.recommended-total')).toContainText('$1,600.00');
+ await expect(proposal.locator('.combined-total')).toContainText('$4,700.00');
+ await expect(proposal).not.toContainText('Tax');
+ expect(await proposal.locator('.price-total').evaluate(el=>Boolean(el.compareDocumentPosition(el.parentElement.querySelector('.recommended-pricing'))&Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+ await page.locator('[data-tab="settings"]').click();
+ await expect(page.locator('[data-path="settings.taxRate"]')).toHaveCount(0);
+});

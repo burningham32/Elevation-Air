@@ -23,3 +23,9 @@ test('additional work lists and legacy single items restore while malformed list
  b.jobs[0].additionalWork[1].price=-1;assert.throws(()=>validateBackup(b));
  const legacy=backup();delete legacy.jobs[0].additionalWork;legacy.jobs[0].extraLabel='Electrical';legacy.jobs[0].extraPrice=300;assert.equal(validateBackup(legacy),true);
 });
+
+test('recommended services round-trip and malformed prices are rejected',()=>{
+ const b=backup();b.jobs[0].recommendedWork=[{description:'Air sealing',price:400}];assert.equal(validateBackup(b),true);
+ b.jobs[0].recommendedWork[0].price='bad';assert.throws(()=>validateBackup(b));
+ delete b.jobs[0].recommendedWork;b.settings.taxRate=8;assert.equal(validateBackup(b),true);
+});
