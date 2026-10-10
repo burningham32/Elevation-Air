@@ -36,6 +36,20 @@ test('inspection persists and produces a correctly priced draft proposal on desk
  await expect(page.locator('#proposal-document')).toContainText('Alex Morgan');
  await expect(page.locator('#proposal-document')).toContainText('Stealth Pro 4.8');
  await expect(page.locator('#proposal-document .price-total')).toContainText('$2,400.00');
+ await page.locator('[data-tab="inspection"]').click();
+ await page.getByRole('radio',{name:'Vaulted Ceilings'}).check();
+ await expect(page.locator('#summary')).toContainText('5,000 CFM');
+ await expect(page.locator('#save-status')).toHaveText('Saved on this device');
+ await page.reload();await expect(page.getByRole('radio',{name:'Vaulted Ceilings'})).toBeChecked();
+ await page.getByRole('button',{name:'Review recommendations'}).click();
+ await expect(page.locator('.model-name').first()).toContainText('Stealth Pro 5.5');
+ await page.locator('#generate').click();
+ await expect(page.locator('#proposal-document')).toContainText('2.5 CFM per ft² for whole house airflow (vaulted ceilings), giving a 5,000 CFM target');
+ await page.locator('[data-tab="inspection"]').click();
+ await page.getByRole('radio',{name:'Standard Ceilings'}).check();
+ await expect(page.locator('#summary')).toContainText('4,000 CFM');
+ await page.locator('#summary-generate').click();
+
  await expect(page.locator('.draft-label')).toHaveText('DRAFT · REVIEW REQUIRED');
  await page.screenshot({path:'/tmp/elevation-proposal.png',fullPage:true});
  await page.pdf({path:'/tmp/elevation-proposal.pdf',format:'Letter',printBackground:true});

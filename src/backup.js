@@ -15,6 +15,7 @@ export function validateBackup(data){
   for(const j of data.jobs){
     if(!j||!id(j.id)||jobIds.has(j.id)||!strings(j,['name','address','phone','email','inspector','date','created','updated','notes','extraLabel','wholeModel','atticModel','garageModel']))fail();
     if(!['trident','stealth'].includes(j.wholeSeries)||!['gable','roof','solar'].includes(j.atticStyle)||!['adequate','inadequate'].includes(j.intake))fail();
+    if(j.ceilingType!==undefined&&!['standard','vaulted'].includes(j.ceilingType))fail();
     if(Array.isArray(j.exhaustVents)) {
       if(j.exhaustVents.length>50)fail();
       for(const v of j.exhaustVents)if(!v||!text(v.type)||!quantity(v.count)||!quantity(v.nfa))fail();

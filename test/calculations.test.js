@@ -35,3 +35,8 @@ test('legacy inspections preserve their single vent during migration',()=>{
  const j=setup();delete j.exhaustVents;j.exhaustType='gable';j.exhaustCount=2;j.exhaustNfa=144;
  const m=migrateJob(j);assert.deepEqual(m.exhaustVents,[{type:'gable',count:2,nfa:144}]);assert.equal(calculate(m,defaults).existingExhaust,288);assert.deepEqual(migrateJob(m).exhaustVents,m.exhaustVents);
 });
+
+test('vaulted ceilings raise whole house airflow and equipment sizing without altering attic requirements',()=>{
+ const j=setup();const normal=calculate(j,defaults);j.ceilingType='vaulted';const vaulted=calculate(j,defaults);
+ assert.equal(normal.whfTarget,4000);assert.equal(vaulted.whfRate,2.5);assert.equal(vaulted.whfTarget,5000);assert.equal(vaulted.whole.id,'t55');assert.equal(vaulted.nfa,normal.nfa);assert.equal(vaulted.atticTarget,normal.atticTarget);assert.equal(vaulted.volume,normal.volume);assert.equal(vaulted.ach,5500*60/16500);
+});
