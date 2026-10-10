@@ -17,11 +17,14 @@ export const defaults = {
     {id:'garage',kind:'garage',series:'garage',name:'QuietCool Garage Fan',cfm:'',price:900,sample:true},
   ]
 };
+export function newExhaustVent(type='ridge') {
+  return {type,count:'',nfa:({'ridge':18,'box / static':60,'gable':80})[type]??''};
+}
 export function newJob() {
   return {id:crypto.randomUUID(),created:new Date().toISOString(),updated:new Date().toISOString(),
     name:'',address:'',phone:'',email:'',inspector:'',date:localDate(),
     levels:[{name:'Main level',sqft:'',height:8}],atticSqft:'',ratio:150,qualified300:false,
-    intake:'inadequate',intakeNfa:'',exhaustVents:[{type:'ridge',count:'',nfa:''}],
+    intake:'inadequate',intakeNfa:'',exhaustVents:[newExhaustVent()],
     notes:'',photos:[],wholeSeries:'trident',atticStyle:'gable',wholeModel:'auto',atticModel:'auto',garageModel:'none',includeWhole:true,includeAttic:true,includeGarage:false,
     includeIntake:false,includeExhaust:false,discount:0,extraLabel:'',extraPrice:0};
 }

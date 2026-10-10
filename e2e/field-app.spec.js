@@ -72,14 +72,22 @@ test('production app works offline after first load and backup restores inspecti
 test('mixed exhaust inventory persists, sums NFA, and appears in the proposal in ft²',async({page})=>{
  await page.setViewportSize({width:390,height:844});await inspect(page);
  await page.locator('[data-path="exhaustVents.0.count"]').fill('20');
- await page.locator('[data-path="exhaustVents.0.nfa"]').fill('18');
+ await expect(page.locator('[data-path="exhaustVents.0.nfa"]')).toHaveValue('18');
  await page.locator('#add-exhaust').click();
+ await expect(page.locator('[data-path="exhaustVents.1.nfa"]')).toHaveValue('60');
+ await page.locator('[data-path="exhaustVents.1.type"]').selectOption('gable');
+ await expect(page.locator('[data-path="exhaustVents.1.nfa"]')).toHaveValue('80');
+ await page.locator('[data-path="exhaustVents.1.type"]').selectOption('ridge');
+ await expect(page.locator('[data-path="exhaustVents.1.nfa"]')).toHaveValue('18');
+ await page.locator('[data-path="exhaustVents.1.type"]').selectOption('box / static');
+ await expect(page.locator('[data-path="exhaustVents.1.nfa"]')).toHaveValue('60');
  await page.locator('[data-path="exhaustVents.1.count"]').fill('4');
  await page.locator('[data-path="exhaustVents.1.nfa"]').fill('50');
  await expect(page.locator('#exhaust-total')).toContainText('560 in² · 3.89 ft²');
  await expect(page.locator('#save-status')).toHaveText('Saved on this device');await page.reload();
  await expect(page.locator('.exhaust-row')).toHaveCount(2);
  await expect(page.locator('[data-path="exhaustVents.1.count"]')).toHaveValue('4');
+ await expect(page.locator('[data-path="exhaustVents.1.nfa"]')).toHaveValue('50');
  await page.locator('.nav-item[data-tab="sizing"]').click();
  await expect(page.locator('.metric').nth(1)).toContainText('10.00 ft²');
  await page.locator('#generate').click();

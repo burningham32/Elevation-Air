@@ -6,7 +6,7 @@ import '@fontsource/manrope/latin-600.css';
 import '@fontsource/manrope/latin-700.css';
 import '@fontsource/manrope/latin-800.css';
 import './style.css';
-import {defaults,newJob,calculate,num,migrateJob} from './calculations.js';
+import {defaults,newJob,calculate,num,migrateJob,newExhaustVent} from './calculations.js';
 import {read,write} from './storage.js';
 import {validateBackup} from './backup.js';
 
@@ -54,7 +54,7 @@ ${field('Customer name','name',job.name,'text')}${field('Phone number','phone',j
 <section class="card"><div class="card-heading"><span class="icon-box">${icon('wind')}</span><div><h3>Existing attic ventilation</h3><p>Record intake and exhaust separately.</p></div></div>
 <div class="grid two"><div class="field"><span>Intake ventilation</span><div class="segmented"><button data-intake="adequate" class="${job.intake==='adequate'?'selected':''}">Adequate</button><button data-intake="inadequate" class="${job.intake==='inadequate'?'selected':''}">Inadequate</button></div><small>Inspector assessment; verify clear, distributed intake.</small></div>${field('Known intake net free area · optional','intakeNfa',job.intakeNfa,'number','in²')}
 <label class="field"><span>Passive ventilation design ratio</span><select data-path="ratio"><option value="150" ${Number(job.ratio)===150?'selected':''}>1:150 · conservative default</option><option value="300" ${Number(job.ratio)===300?'selected':''}>1:300 · only when code conditions are met</option></select></label></div>
-<div class="divider"></div><h3>Exhaust vent inventory</h3><p class="small-note">Add each vent type separately. Enter manufacturer-rated NFA in square inches; ridge vents use linear feet. Fan CFM is not net free area.</p>
+<div class="divider"></div><h3>Exhaust vent inventory</h3><p class="small-note">Add each vent type separately. Defaults: ridge 18 in²/ft, box 60 in²/vent, gable 80 in²/vent. Edit to match manufacturer ratings; ridge vents use linear feet. Fan CFM is not net free area.</p>
 <div class="exhaust-inventory">${job.exhaustVents.map((v,i)=>`<div class="exhaust-row"><label class="field"><span>Exhaust vent type</span><select data-path="exhaustVents.${i}.type">${['ridge','box / static','gable','turbine','powered','mixed','none'].map(t=>`<option value="${t}" ${t===v.type?'selected':''}>${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}</select></label>${field(v.type==='ridge'?'Ridge length':'Vent count',`exhaustVents.${i}.count`,v.count,'number',v.type==='ridge'?'lf':'vents')}${field(v.type==='ridge'?'NFA per linear foot':'NFA per vent',`exhaustVents.${i}.nfa`,v.nfa,'number','in²')}<div class="exhaust-row-total" id="exhaust-row-total-${i}">${ventTotal(v)}</div><button class="icon-button" data-remove-exhaust="${i}" aria-label="Remove exhaust vent row ${i+1}">${icon('trash')}</button></div>`).join('')}</div>
 <button class="text-button" id="add-exhaust">${icon('plus')} Add exhaust vent type</button><div id="exhaust-total" class="exhaust-total" aria-live="polite">${exhaustTotal()}</div>
 ${check('I verified that this attic qualifies for 1:300 under applicable local code.','qualified300',job.qualified300)}
@@ -104,7 +104,7 @@ function changeTab(next){tab=next;render();window.scrollTo({top:0,behavior:'inst
 function refreshSummary(){if($('#summary'))$('#summary').innerHTML=summary();if($('#exhaust-total'))$('#exhaust-total').innerHTML=exhaustTotal();job.exhaustVents.forEach((v,i)=>{const el=$(`#exhaust-row-total-${i}`);if(el)el.innerHTML=ventTotal(v);});}
 document.addEventListener('input',e=>{if(e.target.dataset.path){const path=e.target.dataset.path;setPath(path,e.target.type==='checkbox'?e.target.checked:e.target.value);const changed=path.match(/^settings\.catalog\.(\d+)\.(cfm|name)$/);if(changed){settings.catalog[Number(changed[1])].sample=true;const box=document.querySelector(`[data-verified="${changed[1]}"]`);if(box)box.checked=false;}save();refreshSummary();}});
 document.addEventListener('change',async e=>{
-  if(e.target.dataset.path){setPath(e.target.dataset.path,e.target.type==='checkbox'?e.target.checked:e.target.value);if(e.target.dataset.path==='wholeSeries')job.wholeModel='auto';if(e.target.dataset.path==='atticStyle')job.atticModel='auto';save();if(tab==='sizing'||e.target.tagName==='SELECT'||e.target.type==='checkbox')render();}
+  if(e.target.dataset.path){setPath(e.target.dataset.path,e.target.type==='checkbox'?e.target.checked:e.target.value);const ventType=e.target.dataset.path.match(/^exhaustVents\.(\d+)\.type$/);if(ventType)job.exhaustVents[Number(ventType[1])].nfa=newExhaustVent(e.target.value).nfa;if(e.target.dataset.path==='wholeSeries')job.wholeModel='auto';if(e.target.dataset.path==='atticStyle')job.atticModel='auto';save();if(tab==='sizing'||e.target.tagName==='SELECT'||e.target.type==='checkbox')render();}
   if(e.target.dataset.verified!==undefined){const model=settings.catalog[Number(e.target.dataset.verified)];if(e.target.checked&&!num(model.cfm)){e.target.checked=false;toast('Enter the verified rated airflow before marking this model verified.');return;}model.sample=!e.target.checked;save();render();}
   if(e.target.id==='photo-input'){
     const photoJob=job;const files=[...e.target.files];if(photoJob.photos.length+files.length>24){toast('Keep each inspection to 24 photos.');return;}
@@ -125,7 +125,7 @@ document.addEventListener('click',async e=>{
   if(b.dataset.openJob){await persist();job=jobs.find(j=>j.id===b.dataset.openJob);save();changeTab('inspection');return;}
   if(b.dataset.deleteJob){if(!confirm('Delete this inspection and its photos from this device?'))return;jobs=jobs.filter(j=>j.id!==b.dataset.deleteJob);if(job.id===b.dataset.deleteJob){job=jobs[0]||newJob();if(!jobs.length)jobs.push(job);}await persist();render();showJobs();return;}
   switch(b.id){
-    case 'add-exhaust':if(job.exhaustVents.length>=50){toast('Maximum 50 exhaust entries per inspection.');break;}job.exhaustVents.push({type:'box / static',count:'',nfa:''});save();render();break;
+    case 'add-exhaust':if(job.exhaustVents.length>=50){toast('Maximum 50 exhaust entries per inspection.');break;}job.exhaustVents.push(newExhaustVent('box / static'));save();render();break;
     case 'add-level':job.levels.push({name:`Level ${job.levels.length+1}`,sqft:'',height:8});save();render();break;
     case 'new':await persist();job=newJob();jobs.push(job);save();changeTab('inspection');break;
     case 'generate':case 'summary-generate':await persist();changeTab('proposal');break;
