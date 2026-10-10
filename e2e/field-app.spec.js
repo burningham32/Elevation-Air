@@ -12,7 +12,7 @@ async function inspect(page){
 test('inspection persists and produces a correctly priced draft proposal on desktop',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await inspect(page);
- await expect(page.locator('#summary')).toContainText('1,440 in²');
+ await expect(page.locator('#summary')).toContainText('10.00 ft²');
  await expect(page.locator('#save-status')).toHaveText('Saved on this device');
  await page.reload();await expect(page.locator('[data-path="name"]')).toHaveValue('Alex Morgan');
  await page.getByRole('button',{name:'Review recommendations'}).click();
@@ -44,7 +44,7 @@ test('iPhone layout supports photos, levels, verified equipment and final propos
  await page.locator('[data-verified="1"]').check();
  await page.locator('[data-path="settings.catalog.8.cfm"]').fill('1945');
  await page.locator('[data-verified="8"]').check();
- await page.locator('[data-tab="sizing"]').click();
+ await page.locator('.nav-item[data-tab="sizing"]').click();
  await expect(page.locator('.model-name').first()).toContainText('Trident Pro 5.5');
  await expect(page.locator('.model-name').last()).toContainText('AFG SMT ES-3.0');
  await expect(page.locator('.price-total')).toContainText('$2,950.00');
@@ -67,4 +67,29 @@ test('production app works offline after first load and backup restores inspecti
  await page.locator('#new').click();await expect(page.locator('[data-path="name"]')).toHaveValue('');
  await page.locator('[data-tab="settings"]').click();page.once('dialog',d=>d.accept());await page.locator('#import').setInputFiles(path);await expect(page.locator('#toast')).toContainText('Backup imported');
  await page.locator('#jobs').click();await page.locator('.job-open').filter({hasText:'Alex Morgan'}).click();await expect(page.locator('[data-path="name"]')).toHaveValue('Alex Morgan');
+});
+
+test('mixed exhaust inventory persists, sums NFA, and appears in the proposal in ft²',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await inspect(page);
+ await page.locator('[data-path="exhaustVents.0.count"]').fill('20');
+ await page.locator('[data-path="exhaustVents.0.nfa"]').fill('18');
+ await page.locator('#add-exhaust').click();
+ await page.locator('[data-path="exhaustVents.1.count"]').fill('4');
+ await page.locator('[data-path="exhaustVents.1.nfa"]').fill('50');
+ await expect(page.locator('#exhaust-total')).toContainText('560 in² · 3.89 ft²');
+ await expect(page.locator('#save-status')).toHaveText('Saved on this device');await page.reload();
+ await expect(page.locator('.exhaust-row')).toHaveCount(2);
+ await expect(page.locator('[data-path="exhaustVents.1.count"]')).toHaveValue('4');
+ await page.locator('.nav-item[data-tab="sizing"]').click();
+ await expect(page.locator('.metric').nth(1)).toContainText('10.00 ft²');
+ await page.locator('#generate').click();
+ await expect(page.locator('.exhaust-breakdown')).toContainText('ridge');
+ await expect(page.locator('.exhaust-breakdown')).toContainText('box / static');
+ await expect(page.locator('.exhaust-breakdown')).toContainText('560 in² · 3.89 ft²');
+ await expect(page.locator('.proposal-stats')).toContainText('10.00 ft²');
+ await page.locator('[data-tab="inspection"]').click();
+ await page.locator('[data-remove-exhaust="1"]').click();
+ await expect(page.locator('#exhaust-total')).toContainText('360 in² · 2.50 ft²');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await page.screenshot({path:'/tmp/elevation-exhaust-inventory.png',fullPage:true});
 });

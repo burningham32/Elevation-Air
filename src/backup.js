@@ -15,8 +15,12 @@ export function validateBackup(data){
   for(const j of data.jobs){
     if(!j||!id(j.id)||jobIds.has(j.id)||!strings(j,['name','address','phone','email','inspector','date','created','updated','notes','extraLabel','wholeModel','atticModel','garageModel']))fail();
     if(!['trident','stealth'].includes(j.wholeSeries)||!['gable','roof','solar'].includes(j.atticStyle)||!['adequate','inadequate'].includes(j.intake))fail();
-    if(!text(j.exhaustType)||![150,300].includes(Number(j.ratio))||!['qualified300','includeWhole','includeAttic','includeGarage','includeIntake','includeExhaust'].every(k=>typeof j[k]==='boolean'))fail();
-    if(!['atticSqft','intakeNfa','exhaustCount','exhaustNfa','discount','extraPrice'].every(k=>quantity(j[k]))||!Array.isArray(j.levels)||!j.levels.length||j.levels.length>20||!Array.isArray(j.photos)||j.photos.length>24)fail();
+    if(Array.isArray(j.exhaustVents)) {
+      if(j.exhaustVents.length>50)fail();
+      for(const v of j.exhaustVents)if(!v||!text(v.type)||!quantity(v.count)||!quantity(v.nfa))fail();
+    } else if(j.exhaustVents!==undefined||!text(j.exhaustType)||!quantity(j.exhaustCount)||!quantity(j.exhaustNfa))fail();
+    if(![150,300].includes(Number(j.ratio))||!['qualified300','includeWhole','includeAttic','includeGarage','includeIntake','includeExhaust'].every(k=>typeof j[k]==='boolean'))fail();
+    if(!['atticSqft','intakeNfa','discount','extraPrice'].every(k=>quantity(j[k]))||!Array.isArray(j.levels)||!j.levels.length||j.levels.length>20||!Array.isArray(j.photos)||j.photos.length>24)fail();
     for(const l of j.levels)if(!l||!text(l.name)||!quantity(l.sqft)||!quantity(l.height))fail();
     for(const p of j.photos)if(!p||!text(p.caption)||typeof p.data!=='string'||p.data.length>6000000||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.data))fail();
     jobIds.add(j.id);

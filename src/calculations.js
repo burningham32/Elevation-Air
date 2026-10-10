@@ -21,12 +21,18 @@ export function newJob() {
   return {id:crypto.randomUUID(),created:new Date().toISOString(),updated:new Date().toISOString(),
     name:'',address:'',phone:'',email:'',inspector:'',date:localDate(),
     levels:[{name:'Main level',sqft:'',height:8}],atticSqft:'',ratio:150,qualified300:false,
-    intake:'inadequate',intakeNfa:'',exhaustType:'ridge',exhaustCount:'',exhaustNfa:'',
+    intake:'inadequate',intakeNfa:'',exhaustVents:[{type:'ridge',count:'',nfa:''}],
     notes:'',photos:[],wholeSeries:'trident',atticStyle:'gable',wholeModel:'auto',atticModel:'auto',garageModel:'none',includeWhole:true,includeAttic:true,includeGarage:false,
     includeIntake:false,includeExhaust:false,discount:0,extraLabel:'',extraPrice:0};
 }
 function localDate() { const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 export const num = v => Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0;
+export function exhaustVents(job) {
+  return Array.isArray(job.exhaustVents) ? job.exhaustVents : [{type:job.exhaustType||'ridge',count:job.exhaustCount??'',nfa:job.exhaustNfa??''}];
+}
+export function migrateJob(job) {
+  return {...job,exhaustVents:exhaustVents(job).map(v=>({...v}))};
+}
 export function recommend(catalog,kind,target) {
   if (!target) return null;
   return catalog.filter(m=>m.kind===kind && num(m.cfm)>=target).sort((a,b)=>a.cfm-b.cfm)[0] || null;
@@ -38,7 +44,11 @@ export function calculate(job,settings) {
   const ratio = Number(job.ratio)===300 && job.qualified300 ? 300 : 150;
   const nfa = Math.ceil(attic*144/ratio);
   const intakeNeeded = Math.ceil(nfa/2), exhaustNeeded = Math.ceil(nfa/2);
-  const existingExhaust = num(job.exhaustCount)*num(job.exhaustNfa);
+  const vents = exhaustVents(job);
+  const exhaustBreakdown = vents.map(v=>({...v,known:v.type==='none'||(v.count!==''&&v.nfa!==''),total:v.type==='none'?0:num(v.count)*num(v.nfa)}));
+  const existingExhaust = exhaustBreakdown.reduce((sum,v)=>sum+v.total,0);
+  const exhaustUnknown = exhaustBreakdown.filter(v=>!v.known).length;
+  const nfaSqft=nfa/144;
   const whfTarget = Math.ceil(house*num(settings.whfRate));
   const atticTarget = Math.ceil(attic*num(settings.atticRate));
   const candidates = kind => settings.catalog.filter(m=>m.kind===kind && (kind==='whole'?m.series===job.wholeSeries:kind==='attic'?m.series===job.atticStyle:true));
@@ -73,5 +83,5 @@ export function calculate(job,settings) {
   if(items.some(i=>i.sample)) warnings.push('QuietCool model specifications need confirmation in Settings before issuing a customer quote.');
   if((job.includeWhole && whole && whole.price==='') || (job.includeAttic && atticFan && atticFan.price==='') || (job.includeGarage && garage && garage.price==='')) warnings.push('Set installed equipment prices in Settings. Blank prices are not customer quotes.');
   if((job.includeIntake && settings.intakePrice==='') || (job.includeExhaust && settings.exhaustPrice==='')) warnings.push('Set prices for the included ventilation improvement allowances in Settings.');
-  return {house,volume,attic,ratio,nfa,intakeNeeded,exhaustNeeded,existingExhaust,whfTarget,atticTarget,whole,atticFan,garage,ach,discharge,items,subtotal,discount,tax,total,warnings};
+  return {house,volume,attic,ratio,nfa,nfaSqft,intakeNeeded,exhaustNeeded,existingExhaust,exhaustBreakdown,exhaustUnknown,whfTarget,atticTarget,whole,atticFan,garage,ach,discharge,items,subtotal,discount,tax,total,warnings};
 }
