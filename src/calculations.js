@@ -1,6 +1,6 @@
 export const defaults = {
   businessName: 'Elevation Air', businessPhone: '', businessEmail: '', license: '',
-  whfRate: 2, atticRate: 0.7, dischargeRate: 750, validDays: 30,
+  whfRate: 2.5, whfSizingVersion: 2, atticRate: 0.7, dischargeRate: 750, validDays: 30,
   catalog: [
     {id:'t48',kind:'whole',series:'trident',name:'QuietCool Trident Pro 4.8',cfm:4800,price:2100,sample:true},
     {id:'t55',kind:'whole',series:'trident',name:'QuietCool Trident Pro 5.5',cfm:5500,price:2250,sample:true},
@@ -40,6 +40,9 @@ export function exhaustVents(job) {
 export function additionalWork(job) {
   return job.additionalWork ?? [{description:job.extraLabel??'',price:job.extraPrice??''}];
 }
+export function migrateSettings(settings) {
+  return {...settings,whfRate:settings.whfSizingVersion===2?settings.whfRate:2.5,whfSizingVersion:2};
+}
 export function migrateJob(job) {
   const {extraLabel,extraPrice,includeIntake,includeExhaust,...current}=job;
   return {...current,additionalWork:additionalWork(job).map(item=>({...item})),recommendedWork:(job.recommendedWork??[]).map(item=>({...item})),levels:job.levels.map(({height,...level})=>level),ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
@@ -59,7 +62,7 @@ export function calculate(job,settings) {
   const existingExhaust = exhaustBreakdown.reduce((sum,v)=>sum+v.total,0);
   const exhaustUnknown = exhaustBreakdown.filter(v=>!v.known).length;
   const nfaSqft=nfa/144;
-  const whfRate = job.ceilingType==='vaulted' ? 2.5 : num(settings.whfRate);
+  const whfRate = job.ceilingType==='vaulted' ? 2.75 : num(settings.whfRate);
   const whfTarget = Math.ceil(house*whfRate);
   const atticTarget = Math.ceil(attic*num(settings.atticRate));
   const candidates = kind => settings.catalog.filter(m=>m.kind===kind && (kind==='whole'?m.series===job.wholeSeries:kind==='attic'?m.series===job.atticStyle:true));
