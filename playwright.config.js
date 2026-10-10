@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'./e2e',workers:1,use:{baseURL:'http://127.0.0.1:4173'+(process.env.TEST_BASE_PATH||'/'),launchOptions:{executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']},viewport:{width:1440,height:1000}},webServer:{env:{VITE_BASE_PATH:process.env.TEST_BASE_PATH||'/'},command:'npm run preview -- --port 4173',url:'http://127.0.0.1:4173'+(process.env.TEST_BASE_PATH||'/'),reuseExistingServer:true}});
