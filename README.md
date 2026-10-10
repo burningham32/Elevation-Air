@@ -71,7 +71,6 @@ Whole house automatic selection picks the smallest listed airflow that meets the
 ## Calculation assumptions
 
 - Whole house target: total occupied floor area × 2 CFM/ft² by default for Standard Ceilings. Selecting the Vaulted Ceilings radio option uses 2.5 CFM/ft² across all occupied levels. The choice is saved per inspection and included in the proposal; standard ceiling airflow remains editable in Settings.
-- Air changes/hour: selected whole house CFM × 60 ÷ the sum of each level's area × ceiling height. Actual installed airflow varies.
 - Attic fan planning target: attic footprint × 0.7 CFM/ft² by default.
 - Passive attic NFA: attic footprint ÷ 150 × 144 in², split approximately 50% intake / 50% exhaust. The 1:300 option is applied only after the inspector confirms local code eligibility.
 - Existing exhaust NFA: sum each vent row’s count (or ridge linear feet) × manufacturer NFA per unit. Enter multiple vent types separately. Selecting ridge, box/static, or gable prefills editable values of 18 in² per linear foot, 60 in² per vent, or 80 in² per vent respectively. Loading existing inspections preserves their saved ratings. Unknown rows are flagged and the known sum is labeled partial. Required passive NFA and intake/exhaust targets are displayed in square feet, with square inches retained for reference (144 in² = 1 ft²). Older single-vent inspections and backups migrate without losing their measurements.

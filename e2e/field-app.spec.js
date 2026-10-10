@@ -12,6 +12,7 @@ async function inspect(page){
 test('inspection persists and produces a correctly priced draft proposal on desktop',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await inspect(page);
+ await expect(page.locator('[data-path$=".height"]')).toHaveCount(0);
  await expect(page.locator('#summary')).toContainText('10.00 ft²');
  await expect(page.locator('#save-status')).toHaveText('Saved on this device');
  await page.reload();await expect(page.locator('[data-path="name"]')).toHaveValue('Alex Morgan');
@@ -33,6 +34,7 @@ test('inspection persists and produces a correctly priced draft proposal on desk
  await expect(page.locator('.model-name').first()).toContainText('Stealth Pro 4.8');
  await expect(page.locator('.price-total')).toContainText('$2,400.00');
  await page.getByRole('button',{name:'Generate proposal',exact:false}).last().click();
+ await expect(page.locator('#proposal-document')).not.toContainText('air changes');
  await expect(page.locator('#proposal-document')).toContainText('Alex Morgan');
  await expect(page.locator('#proposal-document')).toContainText('Stealth Pro 4.8');
  await expect(page.locator('#proposal-document .price-total')).toContainText('$2,400.00');

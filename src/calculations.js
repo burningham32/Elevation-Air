@@ -28,7 +28,7 @@ export function newExhaustVent(type='ridge') {
 export function newJob() {
   return {id:crypto.randomUUID(),created:new Date().toISOString(),updated:new Date().toISOString(),
     name:'',address:'',phone:'',email:'',inspector:'',date:localDate(),
-    levels:[{name:'Main level',sqft:'',height:8}],ceilingType:'standard',atticSqft:'',ratio:150,qualified300:false,
+    levels:[{name:'Main level',sqft:''}],ceilingType:'standard',atticSqft:'',ratio:150,qualified300:false,
     intake:'inadequate',intakeNfa:'',exhaustVents:[newExhaustVent()],
     notes:'',photos:[],wholeSeries:'trident',atticStyle:'gable',wholeModel:'auto',atticModel:'auto',garageModel:'none',includeWhole:true,includeAttic:true,includeGarage:false,
     includeIntake:false,includeExhaust:false,discount:0,extraLabel:'',extraPrice:0};
@@ -39,7 +39,7 @@ export function exhaustVents(job) {
   return Array.isArray(job.exhaustVents) ? job.exhaustVents : [{type:job.exhaustType||'ridge',count:job.exhaustCount??'',nfa:job.exhaustNfa??''}];
 }
 export function migrateJob(job) {
-  return {...job,ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
+  return {...job,levels:job.levels.map(({height,...level})=>level),ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
 }
 export function recommend(catalog,kind,target) {
   if (!target) return null;
@@ -47,7 +47,6 @@ export function recommend(catalog,kind,target) {
 }
 export function calculate(job,settings) {
   const house = job.levels.reduce((s,l)=>s+num(l.sqft),0);
-  const volume = job.levels.reduce((s,l)=>s+num(l.sqft)*num(l.height),0);
   const attic = num(job.atticSqft);
   const ratio = Number(job.ratio)===300 && job.qualified300 ? 300 : 150;
   const nfa = Math.ceil(attic*144/ratio);
@@ -67,7 +66,6 @@ export function calculate(job,settings) {
   const application = atticApplications.find(a=>a.type===job.atticStyle);
   const atticFan = settings.catalog.find(m=>m.id===application?.modelId && m.kind==='attic' && m.series===job.atticStyle) || null;
   const garage = settings.catalog.find(m=>m.kind==='garage' && m.id===job.garageModel)||null;
-  const ach = volume && whole ? num(whole.cfm)*60/volume : null;
   const discharge = whole && num(settings.dischargeRate) ? num(whole.cfm)/num(settings.dischargeRate) : 0;
   const items=[];
   if(job.includeWhole && whole) items.push({label:whole.name,price:num(whole.price),sample:!!whole.sample});
@@ -79,7 +77,7 @@ export function calculate(job,settings) {
   const subtotal=items.reduce((s,i)=>s+i.price,0), discount=Math.min(num(job.discount),subtotal);
   const tax=(subtotal-discount)*num(settings.taxRate)/100, total=subtotal-discount+tax;
   const warnings=[];
-  if(!house || job.levels.some(l=>!num(l.sqft)||!num(l.height))) warnings.push('Enter square footage and ceiling height for each occupied level.');
+  if(!house || job.levels.some(l=>!num(l.sqft))) warnings.push('Enter square footage for each occupied level.');
   if(!attic) warnings.push('Enter attic square footage to calculate ventilation.');
   if(!whfRate || !num(settings.atticRate) || !num(settings.dischargeRate)) warnings.push('Set positive airflow and attic discharge sizing rules in Settings.');
   if(Number(job.ratio)===300 && !job.qualified300) warnings.push('1:300 conditions are not confirmed; calculations use the conservative 1:150 ratio.');
@@ -93,5 +91,5 @@ export function calculate(job,settings) {
   if(items.some(i=>i.sample)) warnings.push('QuietCool model specifications need confirmation in Settings before issuing a customer quote.');
   if((job.includeWhole && whole && whole.price==='') || (job.includeAttic && atticFan && atticFan.price==='') || (job.includeGarage && garage && garage.price==='')) warnings.push('Set installed equipment prices in Settings. Blank prices are not customer quotes.');
   if((job.includeIntake && settings.intakePrice==='') || (job.includeExhaust && settings.exhaustPrice==='')) warnings.push('Set prices for the included ventilation improvement allowances in Settings.');
-  return {house,volume,attic,ratio,nfa,nfaSqft,intakeNeeded,exhaustNeeded,existingExhaust,exhaustBreakdown,exhaustUnknown,whfRate,whfTarget,atticTarget,whole,atticFan,garage,ach,discharge,items,subtotal,discount,tax,total,warnings};
+  return {house,attic,ratio,nfa,nfaSqft,intakeNeeded,exhaustNeeded,existingExhaust,exhaustBreakdown,exhaustUnknown,whfRate,whfTarget,atticTarget,whole,atticFan,garage,discharge,items,subtotal,discount,tax,total,warnings};
 }
