@@ -15,7 +15,7 @@ test('override below target is flagged',()=>{
  const j=setup();j.wholeModel='t48';j.levels[0].sqft=2500;const c=calculate(j,defaults);assert.equal(c.whole.id,'t48');assert.ok(c.warnings.some(w=>w.includes('below the airflow target')));
 });
 test('price honors included scope, discount, tax, and nonnegative total',()=>{
- const j=setup();const s=structuredClone(defaults);s.catalog.find(m=>m.id==='t48').price=2900;s.catalog.find(m=>m.id==='gable').price=900;s.catalog.find(m=>m.id==='gable').cfm=1945;s.taxRate=8;j.discount=200;j.extraLabel='Electrical';j.extraPrice=300;let c=calculate(j,s);assert.equal(c.subtotal,4100);assert.equal(c.tax,312);assert.equal(c.total,4212);j.includeAttic=false;c=calculate(j,s);assert.equal(c.subtotal,3200);j.discount=10000;c=calculate(j,s);assert.equal(c.total,0);
+ const j=setup();const s=structuredClone(defaults);s.catalog.find(m=>m.id==='t48').price=2900;s.catalog.find(m=>m.id==='gable').price=900;s.catalog.find(m=>m.id==='gable').cfm=1945;s.taxRate=8;j.discount=200;j.additionalWork=[{description:'Electrical',price:300}];let c=calculate(j,s);assert.equal(c.subtotal,4100);assert.equal(c.tax,312);assert.equal(c.total,4212);j.includeAttic=false;c=calculate(j,s);assert.equal(c.subtotal,3200);j.discount=10000;c=calculate(j,s);assert.equal(c.total,0);
 });
 test('missing measurements and prices remain explicit instead of valid zero estimates',()=>{
  const c=calculate(newJob(),defaults);assert.equal(c.whole,null);assert.equal(c.atticFan.id,'gable');assert.ok(c.warnings.some(w=>w.includes('square footage')));assert.ok(c.warnings.some(w=>w.includes('attic square footage')));const c2=calculate(setup(),defaults);assert.ok(c2.warnings.some(w=>w.includes('rated CFM')));assert.ok(c2.warnings.some(w=>w.includes('confirmation')));
@@ -50,4 +50,12 @@ test('legacy ceiling heights cannot affect any calculation and are removed on mi
  }
  assert.ok(!('volume' in expected));assert.ok(!('ach' in expected));
  assert.ok(!expected.warnings.some(w=>w.includes('ceiling height')));
+});
+
+test('multiple additional work items are separately priced and legacy allowances are ignored',()=>{
+ const j=setup();j.additionalWork=[{description:'Electrical',price:300},{description:'Attic access',price:150},{description:'',price:''}];
+ j.includeIntake=true;j.includeExhaust=true;const s={...defaults,intakePrice:500,exhaustPrice:500};
+ const c=calculate(j,s);assert.equal(c.subtotal,3250);assert.deepEqual(c.items.slice(-2).map(i=>[i.label,i.price]),[['Electrical',300],['Attic access',150]]);
+ const legacy={...j,extraLabel:'Electrical',extraPrice:300};delete legacy.additionalWork;
+ const migrated=migrateJob(legacy);assert.deepEqual(migrated.additionalWork,[{description:'Electrical',price:300}]);assert.equal(calculate(migrated,s).subtotal,3100);assert.ok(!('includeIntake' in migrated));assert.ok(!('extraLabel' in migrated));assert.deepEqual(migrateJob(migrated),migrated);
 });

@@ -17,3 +17,9 @@ test('both legacy single-vent and multiple-vent backups remain importable',()=>{
  const multi=backup();multi.jobs[0].exhaustVents.push({type:'box / static',count:3,nfa:50});assert.equal(validateBackup(multi),true);
  multi.jobs[0].exhaustVents[1].nfa='not a number';assert.throws(()=>validateBackup(multi));
 });
+
+test('additional work lists and legacy single items restore while malformed lists are rejected',()=>{
+ const b=backup();b.jobs[0].additionalWork=[{description:'Electrical',price:300},{description:'Access',price:150}];assert.equal(validateBackup(b),true);
+ b.jobs[0].additionalWork[1].price=-1;assert.throws(()=>validateBackup(b));
+ const legacy=backup();delete legacy.jobs[0].additionalWork;legacy.jobs[0].extraLabel='Electrical';legacy.jobs[0].extraPrice=300;assert.equal(validateBackup(legacy),true);
+});

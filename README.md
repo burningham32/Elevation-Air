@@ -47,7 +47,7 @@ If you later configure a custom domain, change the workflow's `VITE_BASE_PATH` t
 
 ## Before customer use
 
-In **Settings**, enter business contact details, license information, applicable tax rate, and any ventilation upgrade allowances. The supplied fan price sheet is treated as **installed pricing**:
+In **Settings**, enter business contact details, license information, and applicable tax rate. The supplied fan price sheet is treated as **installed pricing**:
 
 | QuietCool model | Installed price |
 | --- | ---: |
@@ -75,7 +75,7 @@ Whole house automatic selection picks the smallest listed airflow that meets the
 - Passive attic NFA: attic footprint ÷ 150 × 144 in², split approximately 50% intake / 50% exhaust. The 1:300 option is applied only after the inspector confirms local code eligibility.
 - Existing exhaust NFA: sum each vent row’s count (or ridge linear feet) × manufacturer NFA per unit. Enter multiple vent types separately. Selecting ridge, box/static, or gable prefills editable values of 18 in² per linear foot, 60 in² per vent, or 80 in² per vent respectively. Loading existing inspections preserves their saved ratings. Unknown rows are flagged and the known sum is labeled partial. Required passive NFA and intake/exhaust targets are displayed in square feet, with square inches retained for reference (144 in² = 1 ft²). Older single-vent inspections and backups migrate without losing their measurements.
 - Whole house attic discharge planning target: fan CFM ÷ 750 CFM per ft² NFA. This is separate from passive ventilation; use the governing requirement and the current installation manual.
-- Installed price: selected scope + optional allowances/additional work − discount + configured tax. Tax currently applies to the entire discounted subtotal; set it appropriately for local rules.
+- Installed price: selected scope + additional work items − discount + configured tax. Tax currently applies to the entire discounted subtotal; set it appropriately for local rules.
 
 Sizing rules are editable planning assumptions, not an engineering or code approval. Verify manufacturer coverage and installation requirements, intake/discharge paths, combustion appliance safety, electrical work, and permits before installation. A powered attic fan does not replace passive net free vent area.
 
@@ -87,3 +87,5 @@ Sizing rules are editable planning assumptions, not an engineering or code appro
 - `src/backup.js`: imported backup validation.
 - `public/sw.js` and `vite.config.js`: offline caching with build-time asset precaching.
 - `test/` and `e2e/`: calculation, import validation, and browser workflow tests.
+
+Additional work supports multiple description/installed-price rows on Recommendations. Each appears separately in proposal pricing. Saved single-item inspections migrate to the new list; intake and exhaust allowances are no longer included.

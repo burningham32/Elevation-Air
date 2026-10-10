@@ -1,7 +1,6 @@
 export const defaults = {
   businessName: 'Elevation Air', businessPhone: '', businessEmail: '', license: '',
   whfRate: 2, atticRate: 0.7, dischargeRate: 750, taxRate: 0, validDays: 30,
-  intakePrice: '', exhaustPrice: '',
   catalog: [
     {id:'t48',kind:'whole',series:'trident',name:'QuietCool Trident Pro 4.8',cfm:4800,price:2100,sample:true},
     {id:'t55',kind:'whole',series:'trident',name:'QuietCool Trident Pro 5.5',cfm:5500,price:2250,sample:true},
@@ -31,15 +30,19 @@ export function newJob() {
     levels:[{name:'Main level',sqft:''}],ceilingType:'standard',atticSqft:'',ratio:150,qualified300:false,
     intake:'inadequate',intakeNfa:'',exhaustVents:[newExhaustVent()],
     notes:'',photos:[],wholeSeries:'trident',atticStyle:'gable',wholeModel:'auto',atticModel:'auto',garageModel:'none',includeWhole:true,includeAttic:true,includeGarage:false,
-    includeIntake:false,includeExhaust:false,discount:0,extraLabel:'',extraPrice:0};
+    discount:0,additionalWork:[{description:'',price:''}]};
 }
 function localDate() { const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 export const num = v => Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0;
 export function exhaustVents(job) {
   return Array.isArray(job.exhaustVents) ? job.exhaustVents : [{type:job.exhaustType||'ridge',count:job.exhaustCount??'',nfa:job.exhaustNfa??''}];
 }
+export function additionalWork(job) {
+  return job.additionalWork ?? [{description:job.extraLabel??'',price:job.extraPrice??''}];
+}
 export function migrateJob(job) {
-  return {...job,levels:job.levels.map(({height,...level})=>level),ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
+  const {extraLabel,extraPrice,includeIntake,includeExhaust,...current}=job;
+  return {...current,additionalWork:additionalWork(job).map(item=>({...item})),levels:job.levels.map(({height,...level})=>level),ceilingType:job.ceilingType??'standard',exhaustVents:exhaustVents(job).map(v=>({...v}))};
 }
 export function recommend(catalog,kind,target) {
   if (!target) return null;
@@ -71,9 +74,7 @@ export function calculate(job,settings) {
   if(job.includeWhole && whole) items.push({label:whole.name,price:num(whole.price),sample:!!whole.sample});
   if(job.includeAttic && atticFan) items.push({label:atticFan.name,price:num(atticFan.price),sample:!!atticFan.sample});
   if(job.includeGarage && garage) items.push({label:garage.name,price:num(garage.price),sample:!!garage.sample});
-  if(job.includeIntake) items.push({label:'Intake ventilation improvement allowance',price:num(settings.intakePrice),sample:false});
-  if(job.includeExhaust) items.push({label:'Exhaust ventilation improvement allowance',price:num(settings.exhaustPrice),sample:false});
-  if(job.extraLabel.trim()) items.push({label:job.extraLabel.trim(),price:num(job.extraPrice),sample:false});
+  for(const work of additionalWork(job)) if(work.description.trim()) items.push({label:work.description.trim(),price:num(work.price),sample:false});
   const subtotal=items.reduce((s,i)=>s+i.price,0), discount=Math.min(num(job.discount),subtotal);
   const tax=(subtotal-discount)*num(settings.taxRate)/100, total=subtotal-discount+tax;
   const warnings=[];
@@ -90,6 +91,7 @@ export function calculate(job,settings) {
   if(job.includeAttic && atticFan && !num(atticFan.cfm)) warnings.push('Set the selected attic fan’s rated CFM.');
   if(items.some(i=>i.sample)) warnings.push('QuietCool model specifications need confirmation in Settings before issuing a customer quote.');
   if((job.includeWhole && whole && whole.price==='') || (job.includeAttic && atticFan && atticFan.price==='') || (job.includeGarage && garage && garage.price==='')) warnings.push('Set installed equipment prices in Settings. Blank prices are not customer quotes.');
-  if((job.includeIntake && settings.intakePrice==='') || (job.includeExhaust && settings.exhaustPrice==='')) warnings.push('Set prices for the included ventilation improvement allowances in Settings.');
+  if(additionalWork(job).some(w=>w.description.trim() && w.price==='')) warnings.push('Enter an installed price for each additional work item.');
+  if(additionalWork(job).some(w=>!w.description.trim() && num(w.price))) warnings.push('Enter a description for each priced additional work item.');
   return {house,attic,ratio,nfa,nfaSqft,intakeNeeded,exhaustNeeded,existingExhaust,exhaustBreakdown,exhaustUnknown,whfRate,whfTarget,atticTarget,whole,atticFan,garage,discharge,items,subtotal,discount,tax,total,warnings};
 }

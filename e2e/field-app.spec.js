@@ -127,3 +127,32 @@ test('mixed exhaust inventory persists, sums NFA, and appears in the proposal in
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
  await page.screenshot({path:'/tmp/elevation-exhaust-inventory.png',fullPage:true});
 });
+
+test('iPhone additional work items persist, can be removed, and are itemized in proposals',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await inspect(page);
+ await page.getByRole('button',{name:'Review recommendations'}).click();
+ await expect(page.locator('[data-path="includeIntake"],[data-path="includeExhaust"]')).toHaveCount(0);
+ await page.locator('[data-path="additionalWork.0.description"]').fill('Electrical circuit');
+ await page.locator('[data-path="additionalWork.0.price"]').fill('300');
+ await page.locator('#add-work').click();
+ await page.locator('[data-path="additionalWork.1.description"]').fill('Attic access');
+ await page.locator('[data-path="additionalWork.1.price"]').fill('150');
+ await page.locator('#add-work').click();
+ await page.locator('[data-path="additionalWork.2.description"]').fill('Remove this item');
+ await page.locator('[data-path="additionalWork.2.price"]').fill('100');
+ await page.getByRole('button',{name:'Remove additional work item 3',exact:true}).click();
+ await expect(page.locator('.price-total')).toContainText('$3,250.00');
+ await expect(page.locator('#save-status')).toHaveText('Saved on this device');
+ await page.reload();await page.getByRole('button',{name:'Review recommendations'}).click();
+ await expect(page.locator('[data-path="additionalWork.1.description"]')).toHaveValue('Attic access');
+ await expect(page.locator('[data-path="additionalWork.1.price"]')).toHaveValue('150');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.locator('#generate').click();
+ await expect(page.locator('#proposal-document .price-table:not(.exhaust-breakdown)')).toContainText('Electrical circuit');
+ await expect(page.locator('#proposal-document .price-table:not(.exhaust-breakdown)')).toContainText('$300.00');
+ await expect(page.locator('#proposal-document .price-table:not(.exhaust-breakdown)')).toContainText('Attic access');
+ await expect(page.locator('#proposal-document .price-total')).toContainText('$3,250.00');
+ await expect(page.locator('#proposal-document')).not.toContainText('Remove this item');
+ await page.locator('[data-tab="settings"]').click();
+ await expect(page.locator('[data-path="settings.intakePrice"],[data-path="settings.exhaustPrice"]')).toHaveCount(0);
+});

@@ -1,6 +1,6 @@
 const BASE=new URL('./',self.location.href).pathname;
 const PREFIX='elevation-air:'+BASE+':';
-const CACHE=PREFIX+'v8';
+const CACHE=PREFIX+'v9';
 const PRECACHE = [];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll([BASE,BASE+'icon.svg',BASE+'manifest.webmanifest',BASE+'elevation-air-logo.png',BASE+'apple-touch-icon.png',...PRECACHE.map(f=>BASE+f)])));
